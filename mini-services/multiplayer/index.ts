@@ -215,8 +215,9 @@ function leaveRoom(socket: any, roomId: string) {
   }
 }
 
-const PORT = 3003
-httpServer.listen(PORT, () => {
+// Render/Railway/Fly set PORT automatically. Fall back to 3003 for local dev.
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3003
+httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`[lion-multiplayer] socket.io server running on port ${PORT}`)
 })
 
