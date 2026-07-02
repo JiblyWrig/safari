@@ -30,3 +30,16 @@ model Post {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model LeaderboardEntry {
+  id        String   @id @default(cuid())
+  name      String
+  hunts     Int
+  survived  Int      // seconds survived this session
+  mode      String   @default("single") // "single" | "multi"
+  color     String   @default("#c98a3a")
+  createdAt DateTime @default(now())
+
+  @@index([hunts(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+}

@@ -6,15 +6,19 @@ import { Badge } from '@/components/ui/badge'
 import { useGame } from '@/lib/store'
 import { stats } from '@/lib/stats'
 import { mp } from '@/lib/multiplayer'
-import { terrainHeight, WATER_LEVEL, WORLD_SIZE } from '@/lib/terrain'
+import { WORLD_SIZE } from '@/lib/terrain'
 import {
   Heart,
-  Gauge,
   Users,
   LogOut,
-  Crosshair,
   Map as MapIcon,
+  Sun,
+  Droplets,
+  Skull,
+  CloudRain,
+  Swords,
 } from 'lucide-react'
+import { usePhotoMode } from './PhotoMode'
 
 const ANIM_LABEL: Record<string, string> = {
   idle: 'Resting',
@@ -26,24 +30,32 @@ const ANIM_LABEL: Record<string, string> = {
 
 function useHudStats() {
   const [s, setS] = useState({
-    speed: 0,
-    stamina: 1,
+    health: 1,
     anim: 'idle',
     fps: 0,
     roaring: false,
+    attacking: false,
     inWater: false,
+    drinking: false,
     playerCount: 1,
+    dead: false,
+    respawnAt: 0,
+    rainIntensity: 0,
   })
   useEffect(() => {
     const id = setInterval(() => {
       setS({
-        speed: stats.speed,
-        stamina: stats.stamina,
+        health: stats.health,
         anim: stats.anim,
         fps: stats.fps,
         roaring: stats.roaring,
+        attacking: stats.attacking,
         inWater: stats.inWater,
+        drinking: stats.drinking,
         playerCount: mp.players.size + 1,
+        dead: stats.dead,
+        respawnAt: stats.respawnAt,
+        rainIntensity: stats.rainIntensity,
       })
     }, 100)
     return () => clearInterval(id)
@@ -62,24 +74,15 @@ function Minimap() {
     const half = WORLD_SIZE / 2
     const id = setInterval(() => {
       ctx.clearRect(0, 0, size, size)
-      // background savannah
+      // background savannah — always bright day
       ctx.fillStyle = '#7c9a44'
       ctx.fillRect(0, 0, size, size)
-      // dry patches
-      ctx.fillStyle = 'rgba(184,154,85,0.5)'
-      for (let i = 0; i < 5; i++) {
-        const x = ((Math.sin(i * 2.3) + 1) / 2) * size
-        const y = ((Math.cos(i * 1.7) + 1) / 2) * size
-        ctx.beginPath()
-        ctx.arc(x, y, 14, 0, Math.PI * 2)
-        ctx.fill()
-      }
       // water hole
       const wx = ((70 + half) / WORLD_SIZE) * size
       const wy = ((70 + half) / WORLD_SIZE) * size
       ctx.fillStyle = '#3f7fa8'
       ctx.beginPath()
-      ctx.arc(wx, wy, ((22) / WORLD_SIZE) * size, 0, Math.PI * 2)
+      ctx.arc(wx, wy, (22 / WORLD_SIZE) * size, 0, Math.PI * 2)
       ctx.fill()
       // ridge
       const rx = ((-80 + half) / WORLD_SIZE) * size
@@ -147,6 +150,9 @@ export function HUD() {
   const exitToMenu = useGame((st) => st.exitToMenu)
   const mode = useGame((st) => st.mode)
   const showMinimap = useGame((st) => st.settings.showMinimap)
+  const photoMode = usePhotoMode()
+
+  if (photoMode) return null
 
   return (
     <div className="pointer-events-none absolute inset-0 z-20 select-none">
@@ -154,13 +160,22 @@ export function HUD() {
       <div className="absolute top-0 left-0 right-0 flex items-start justify-between p-3 sm:p-4">
         <div className="flex flex-col gap-2">
           {showMinimap && <Minimap />}
-          <Badge
-            variant="secondary"
-            className="bg-amber-900/70 text-amber-50 border-amber-700/50 backdrop-blur-sm w-fit"
-          >
-            <Users className="w-3 h-3 mr-1" />
-            {mode === 'multi' ? `${s.playerCount} in savannah` : 'Solo'}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge
+              variant="secondary"
+              className="bg-amber-900/70 text-amber-50 border-amber-700/50 backdrop-blur-sm"
+            >
+              <Users className="w-3 h-3 mr-1" />
+              {mode === 'multi' ? `${s.playerCount} in savannah` : 'Solo'}
+            </Badge>
+            <Badge
+              variant="secondary"
+              className="bg-black/50 text-amber-300 border-white/10 backdrop-blur-sm"
+            >
+              <Sun className="w-3 h-3 mr-1" />
+              Day
+            </Badge>
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -184,51 +199,62 @@ export function HUD() {
         </div>
       </div>
 
-      {/* Bottom-left: vitals */}
+      {/* Bottom-left: vitals (health + status only) */}
       <div className="absolute bottom-4 left-3 sm:left-4 flex flex-col gap-2 w-48">
         <div className="bg-black/55 backdrop-blur-md rounded-xl p-3 border border-amber-900/40 shadow-xl">
+          {/* Health */}
           <div className="flex items-center justify-between mb-1">
             <span className="text-amber-100/90 text-xs font-semibold flex items-center gap-1">
               <Heart className="w-3.5 h-3.5 text-red-400" />
-              Stamina
+              Health
             </span>
             <span className="text-amber-50/70 text-[10px] font-mono">
-              {Math.round(s.stamina * 100)}%
+              {Math.round(s.health * 100)}%
             </span>
           </div>
           <div className="h-2.5 bg-black/50 rounded-full overflow-hidden border border-amber-950/50">
             <div
-              className="h-full rounded-full transition-[width] duration-100"
+              className="h-full rounded-full transition-[width] duration-150"
               style={{
-                width: `${s.stamina * 100}%`,
+                width: `${s.health * 100}%`,
                 background:
-                  s.stamina > 0.3
-                    ? 'linear-gradient(90deg,#f59e0b,#fbbf24)'
+                  s.health > 0.4
+                    ? 'linear-gradient(90deg,#16a34a,#4ade80)'
                     : 'linear-gradient(90deg,#b91c1c,#ef4444)',
               }}
             />
           </div>
-          <div className="flex items-center justify-between mt-2.5 mb-1">
-            <span className="text-amber-100/90 text-xs font-semibold flex items-center gap-1">
-              <Gauge className="w-3.5 h-3.5 text-amber-300" />
-              Speed
-            </span>
-            <span className="text-amber-50/80 text-[10px] font-mono">
-              {s.speed.toFixed(1)} m/s
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
+          {/* Status badges */}
+          <div className="flex items-center gap-1.5 flex-wrap mt-2.5">
             <Badge className="bg-amber-700/70 text-amber-50 border-amber-600/40 text-[10px] py-0">
               {ANIM_LABEL[s.anim] ?? s.anim}
             </Badge>
+            {s.attacking && (
+              <Badge className="bg-orange-600/80 text-orange-50 border-orange-500/40 text-[10px] py-0 animate-pulse">
+                <Swords className="w-3 h-3 mr-0.5" />
+                Swipe!
+              </Badge>
+            )}
             {s.roaring && (
               <Badge className="bg-red-700/80 text-red-50 border-red-600/40 text-[10px] py-0 animate-pulse">
                 ROAR!
               </Badge>
             )}
-            {s.inWater && (
+            {s.drinking && (
+              <Badge className="bg-sky-600/80 text-sky-50 border-sky-500/40 text-[10px] py-0 animate-pulse">
+                <Droplets className="w-3 h-3 mr-0.5" />
+                Drinking
+              </Badge>
+            )}
+            {s.inWater && !s.drinking && (
               <Badge className="bg-sky-700/70 text-sky-50 border-sky-600/40 text-[10px] py-0">
                 Water
+              </Badge>
+            )}
+            {s.rainIntensity > 0.1 && (
+              <Badge className="bg-slate-600/70 text-sky-50 border-slate-500/40 text-[10px] py-0 animate-pulse">
+                <CloudRain className="w-3 h-3 mr-0.5" />
+                Rain
               </Badge>
             )}
           </div>
@@ -244,10 +270,39 @@ export function HUD() {
           <span className="text-amber-700">·</span>
           <span><kbd className="font-mono text-amber-200">Space</kbd> Jump</span>
           <span className="text-amber-700">·</span>
+          <span><kbd className="font-mono text-amber-200">Click</kbd> Attack</span>
+          <span className="text-amber-700">·</span>
           <span><kbd className="font-mono text-amber-200">R</kbd> Roar</span>
           <span className="text-amber-700">·</span>
           <span><kbd className="font-mono text-amber-200">Mouse</kbd> Look</span>
         </div>
+      </div>
+
+      {/* Death overlay */}
+      {s.dead && <DeathOverlay respawnAt={s.respawnAt} />}
+    </div>
+  )
+}
+
+function DeathOverlay({ respawnAt }: { respawnAt: number }) {
+  const [remaining, setRemaining] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => {
+      setRemaining(Math.max(0, Math.ceil((respawnAt - performance.now()) / 1000)))
+    }, 100)
+    return () => clearInterval(id)
+  }, [respawnAt])
+  return (
+    <div className="absolute inset-0 z-40 flex items-center justify-center bg-red-950/60 backdrop-blur-sm pointer-events-none">
+      <div className="text-center px-8 py-6 bg-black/70 rounded-2xl border-2 border-red-800/60 shadow-2xl">
+        <Skull className="w-16 h-16 text-red-400 mx-auto mb-3 animate-pulse" />
+        <h2 className="text-3xl font-black text-red-100 mb-1 tracking-wider">YOU FELL</h2>
+        <p className="text-red-200/70 text-sm mb-3">
+          Your lion has collapsed…
+        </p>
+        <p className="text-amber-200 text-lg font-semibold">
+          Respawning in {remaining}s
+        </p>
       </div>
     </div>
   )

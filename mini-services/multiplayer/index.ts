@@ -19,6 +19,7 @@ interface PlayerConfig {
   name: string
   color: string // lion body color
   maneColor: string
+  isMale: boolean
 }
 interface PlayerState {
   id: string
@@ -90,6 +91,7 @@ io.on('connection', (socket) => {
         name: (config?.name || 'Lion').slice(0, 24),
         color: config?.color || '#c98a3a',
         maneColor: config?.maneColor || '#7a4a1e',
+        isMale: config?.isMale !== false,
       },
       pos: [0, 0, 0],
       rot: 0,

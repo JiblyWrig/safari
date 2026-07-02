@@ -74,7 +74,7 @@ function mixColors(a: string, b: string, t: number) {
   )}, ${Math.round(lerp(ca.b, cb.b, t))})`
 }
 
-/** Savannah grass: golden-green with dry patches and subtle blade noise. */
+/** Savannah grass: clean uniform green-gold grass with gentle variation. */
 export function grassTexture(size = 512): THREE.Texture {
   const key = `grass-${size}`
   if (cache.has(key)) return cache.get(key)!
@@ -84,18 +84,8 @@ export function grassTexture(size = 512): THREE.Texture {
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       const n = fbm(x / 48, y / 48, 5, 1)
-      const patch = fbm(x / 160, y / 160, 3, 7)
-      // base grass colors
-      let col = mixColors('#6b8a3a', '#9fb557', n)
-      // dry / dirt patches
-      if (patch > 0.62) {
-        col = mixColors(col, '#b69b5e', (patch - 0.62) * 2.4)
-      }
-      // tiny blade speckle
-      const speck = valueNoise2D(x * 0.7, y * 0.7, 3)
-      if (speck > 0.86) {
-        col = mixColors(col, '#4f6b2c', 0.4)
-      }
+      // base grass colors — gentle variation between two greens only
+      const col = mixColors('#7a9a3e', '#9fb557', n)
       const rgb = col.match(/\d+/g)!.map(Number)
       const i = (y * size + x) * 4
       img.data[i] = rgb[0]

@@ -10,18 +10,25 @@ class InputManager {
     jump: false,
     roar: false,
   }
+  photoMode = false
+  attackQueued = false // left-click attack (consumed each frame)
   mouseDX = 0
   mouseDY = 0
   pointerLocked = false
+  // touch state
+  touchMove = { x: 0, y: 0 } // joystick vector (-1..1)
+  isTouch = false
   private installed = false
   private lockedEl: HTMLElement | null = null
 
   install() {
     if (this.installed) return
     this.installed = true
+    this.isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0
     window.addEventListener('keydown', this.onKeyDown)
     window.addEventListener('keyup', this.onKeyUp)
     window.addEventListener('mousemove', this.onMouseMove)
+    window.addEventListener('mousedown', this.onMouseDown)
     document.addEventListener('pointerlockchange', this.onPointerLockChange)
   }
 
@@ -31,6 +38,7 @@ class InputManager {
     window.removeEventListener('keydown', this.onKeyDown)
     window.removeEventListener('keyup', this.onKeyUp)
     window.removeEventListener('mousemove', this.onMouseMove)
+    window.removeEventListener('mousedown', this.onMouseDown)
     document.removeEventListener('pointerlockchange', this.onPointerLockChange)
   }
 
@@ -51,6 +59,25 @@ class InputManager {
     if (!this.pointerLocked) return
     this.mouseDX += e.movementX
     this.mouseDY += e.movementY
+  }
+
+  // Left-click attacks (only when pointer is locked — i.e. in-game)
+  private onMouseDown = (e: MouseEvent) => {
+    if (e.button === 0 && this.pointerLocked) {
+      this.attackQueued = true
+    }
+  }
+
+  // Called by touch controls to inject look delta
+  addTouchLook(dx: number, dy: number) {
+    this.mouseDX += dx
+    this.mouseDY += dy
+  }
+
+  // Called by virtual joystick
+  setTouchMove(x: number, y: number) {
+    this.touchMove.x = x
+    this.touchMove.y = y
   }
 
   private setKey(code: string, down: boolean) {
@@ -81,11 +108,13 @@ class InputManager {
       case 'KeyR':
         this.keys.roar = down
         break
+      case 'KeyP':
+        if (down) this.photoMode = !this.photoMode
+        break
     }
   }
 
   private onKeyDown = (e: KeyboardEvent) => {
-    // Avoid stealing typing in inputs
     const t = e.target as HTMLElement
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
     this.setKey(e.code, true)
@@ -110,6 +139,12 @@ class InputManager {
     const r = this.keys.roar
     this.keys.roar = false
     return r
+  }
+
+  consumeAttack(): boolean {
+    const a = this.attackQueued
+    this.attackQueued = false
+    return a
   }
 }
 

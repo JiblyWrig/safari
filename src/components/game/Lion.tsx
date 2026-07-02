@@ -10,6 +10,7 @@ export interface LionAnimState {
   anim: AnimState
   speed: number // 0..1 normalized gait intensity
   roarAt: number // performance.now() ms when roar triggered, 0 = none
+  attackAt: number // performance.now() ms when attack triggered, 0 = none
 }
 
 interface LionProps {
@@ -53,6 +54,7 @@ export function Lion({
     anim: initialAnim,
     speed: 0,
     roarAt: 0,
+    attackAt: 0,
   })
   const st = stateRef ?? internal
   const t = useRef(0)
@@ -60,7 +62,7 @@ export function Lion({
   useFrame((_, delta) => {
     t.current += delta
     const time = t.current
-    const { anim, speed, roarAt } = st.current
+    const { anim, speed, roarAt, attackAt } = st.current
 
     // ---- Gait parameters ----
     let freq = 0
@@ -155,6 +157,26 @@ export function Lion({
     if (mane.current) {
       const s = 1 + 0.12 * roarEnv
       mane.current.scale.set(s, s, s)
+    }
+
+    // ---- Attack paw swing ----
+    // The right front paw swings forward and up in a 0.5s arc.
+    let attackEnv = 0
+    if (attackAt > 0) {
+      const e = (performance.now() - attackAt) / 500
+      if (e >= 0 && e < 1) {
+        // sharp rise, smooth fall
+        attackEnv = Math.sin(e * Math.PI)
+      }
+    }
+    if (legFR.current && kneeFR.current) {
+      // Override the gait swing with the attack swing (stronger)
+      legFR.current.rotation.x = -1.4 * attackEnv + legFR.current.rotation.x * (1 - attackEnv)
+      kneeFR.current.rotation.x = -1.2 * attackEnv + kneeFR.current.rotation.x * (1 - attackEnv)
+    }
+    // slight body lunge forward during attack
+    if (body.current) {
+      body.current.rotation.x += attackEnv * 0.12
     }
   })
 

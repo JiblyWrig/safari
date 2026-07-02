@@ -7,12 +7,14 @@ export type MenuScreen =
   | 'settings'
   | 'howto'
   | 'lobby'
+  | 'leaderboard'
 export type GameMode = 'single' | 'multi'
 
 export interface PlayerConfig {
   name: string
   color: string
   maneColor: string
+  isMale: boolean
 }
 
 export interface Settings {
@@ -24,6 +26,9 @@ export interface Settings {
   showMinimap: boolean
   graphics: 'low' | 'medium' | 'high'
   shadows: boolean
+  audioEnabled: boolean
+  volume: number
+  dayLength: number // seconds for a full day/night cycle (60-600)
 }
 
 interface GameState {
@@ -62,6 +67,7 @@ export const useGame = create<GameState>((set) => ({
     name: 'Simba',
     color: LION_COLORS[0],
     maneColor: '#6e3f1a',
+    isMale: true,
   },
   settings: {
     sensitivity: 1,
@@ -72,6 +78,9 @@ export const useGame = create<GameState>((set) => ({
     showMinimap: true,
     graphics: 'high',
     shadows: true,
+    audioEnabled: true,
+    volume: 0.6,
+    dayLength: 180,
   },
   connected: false,
   playerCount: 1,

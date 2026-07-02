@@ -166,7 +166,7 @@ class MultiplayerClient {
     } else {
       this.players.set(p.id, {
         id: p.id,
-        config: p.config ?? { name: 'Lion', color: '#c98a3a', maneColor: '#6e3f1a' },
+        config: p.config ?? { name: 'Lion', color: '#c98a3a', maneColor: '#6e3f1a', isMale: true },
         pos: pos.clone(),
         targetPos: pos.clone(),
         rot: p.rot ?? 0,

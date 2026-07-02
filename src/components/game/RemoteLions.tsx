@@ -69,15 +69,17 @@ function RemoteLion({ id }: { id: string }) {
   const name = config?.name ?? 'Lion'
   const color = config?.color ?? '#c98a3a'
   const maneColor = config?.maneColor ?? '#6e3f1a'
+  const isMale = config?.isMale !== false
 
   return (
-    <group ref={group}>
+    <group ref={group} scale={isMale ? 1 : 0.88}>
       <Lion
         color={color}
         maneColor={maneColor}
         stateRef={stateRef}
         initialAnim="idle"
         nameTag={name}
+        isMale={isMale}
       />
     </group>
   )
